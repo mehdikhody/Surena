@@ -1,6 +1,10 @@
 package controllers
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"fmt"
+	"github.com/gofiber/fiber/v2"
+	"surena/node/scheduler"
+)
 
 type MainController struct {
 	App *fiber.App
@@ -21,5 +25,7 @@ func (c *MainController) RegisterRoutes() {
 }
 
 func (c *MainController) Home(ctx *fiber.Ctx) error {
-	return ctx.SendString("Hello, World!")
+	htop := scheduler.GetScheduler().HtopTask
+
+	return ctx.SendString(fmt.Sprintf("CPU: %v", htop.CPU))
 }
