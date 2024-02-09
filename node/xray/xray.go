@@ -8,7 +8,7 @@ type Xray struct {
 	API *api.API
 }
 
-func Init() *Xray {
+func New() *Xray {
 	xray = &Xray{}
 
 	var err error
