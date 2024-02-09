@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"surena/node/database/models"
@@ -15,9 +16,10 @@ type Database struct {
 	Client  *models.ClientModel
 }
 
-func NewDatabase(dbPath string) *Database {
-	dbFile := sqlite.Open(dbPath)
-	db, err := gorm.Open(dbFile, &gorm.Config{
+func New(path string) *Database {
+	uri := fmt.Sprintf("file:%s?cache=shared", path)
+	file := sqlite.Open(uri)
+	db, err := gorm.Open(file, &gorm.Config{
 		PrepareStmt:          true,
 		FullSaveAssociations: true,
 	})
