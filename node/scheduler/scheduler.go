@@ -7,7 +7,7 @@ import (
 )
 
 var scheduler *Scheduler
-var schedulerInit = false
+var schedulerInitialized = false
 var schedulerStarted = false
 
 type Scheduler struct {
@@ -17,7 +17,7 @@ type Scheduler struct {
 }
 
 func New(timezone string) *Scheduler {
-	if schedulerInit {
+	if schedulerInitialized {
 		return scheduler
 	}
 
@@ -33,12 +33,12 @@ func New(timezone string) *Scheduler {
 		),
 	}
 
-	schedulerInit = true
+	schedulerInitialized = true
 	return scheduler
 }
 
 func Get() *Scheduler {
-	if !schedulerInit {
+	if !schedulerInitialized {
 		panic("Scheduler is not initialized")
 	}
 
