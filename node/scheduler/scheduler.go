@@ -17,9 +17,9 @@ type Scheduler struct {
 	XrayTask *tasks.XrayTask
 }
 
-func New() *Scheduler {
+func Initialize() *Scheduler {
 	if schedulerInitialized {
-		return scheduler
+		panic("Scheduler is already initialized")
 	}
 
 	timezone := GetTimezone()
