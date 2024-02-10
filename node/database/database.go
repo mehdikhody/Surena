@@ -24,7 +24,7 @@ func New() *Database {
 		panic("Database already initialized")
 	}
 
-	databasePath := GetDatabaseFilePath()
+	databasePath := GetFilePath()
 	file := sqlite.Open(fmt.Sprintf("file:%s?cache=shared", databasePath))
 	db, err := gorm.Open(file, &gorm.Config{
 		PrepareStmt:          true,
@@ -54,7 +54,7 @@ func Get() *Database {
 	return database
 }
 
-func GetDatabaseFilePath() string {
+func GetFilePath() string {
 	dbpath := os.Getenv("DATABASE_PATH")
 	if dbpath == "" {
 		dbpath = "db/node.db"
