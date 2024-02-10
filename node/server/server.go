@@ -12,9 +12,10 @@ var serverInitialized = false
 var serverStarted = false
 
 type Server struct {
-	host string
-	port int
-	app  *fiber.App
+	host           string
+	port           int
+	app            *fiber.App
+	MainController *controllers.MainController
 }
 
 func Initialize() *Server {
@@ -22,14 +23,14 @@ func Initialize() *Server {
 		panic("Server is already initialized")
 	}
 
-	app := fiber.New()
-	app.Mount("/", controllers.NewMainController())
-
 	server = &Server{
-		host: GetHost(),
-		port: GetPort(),
-		app:  app,
+		host:           GetHost(),
+		port:           GetPort(),
+		app:            fiber.New(),
+		MainController: controllers.NewMainController(),
 	}
+
+	server.app.Mount("/", server.MainController.GetApp())
 
 	serverInitialized = true
 	return server
