@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"github.com/robfig/cron/v3"
+	"os"
 	"surena/node/scheduler/tasks"
 	"time"
 )
@@ -16,11 +17,12 @@ type Scheduler struct {
 	XrayTask *tasks.XrayTask
 }
 
-func New(timezone string) *Scheduler {
+func New() *Scheduler {
 	if schedulerInitialized {
 		return scheduler
 	}
 
+	timezone := GetTimezone()
 	location, err := time.LoadLocation(timezone)
 	if err != nil {
 		panic(err)
@@ -43,6 +45,15 @@ func Get() *Scheduler {
 	}
 
 	return scheduler
+}
+
+func GetTimezone() string {
+	timezone := os.Getenv("TZ")
+	if timezone == "" {
+		timezone = "UTC"
+	}
+
+	return timezone
 }
 
 func (s *Scheduler) Start() {
