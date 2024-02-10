@@ -19,7 +19,7 @@ type Database struct {
 	Client  *models.ClientModel
 }
 
-func New() *Database {
+func Initialize() *Database {
 	if databaseInitialized {
 		panic("Database already initialized")
 	}
