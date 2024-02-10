@@ -6,26 +6,31 @@ import (
 	"surena/node/scheduler"
 )
 
+var controller *MainController
+
 type MainController struct {
-	App *fiber.App
+	app *fiber.App
 }
 
-func NewMainController() *fiber.App {
-	app := fiber.New()
-	controller := &MainController{
-		App: app,
+func NewMainController() *MainController {
+	if controller != nil {
+		return controller
 	}
 
-	controller.RegisterRoutes()
-	return app
+	controller := &MainController{
+		app: fiber.New(),
+	}
+
+	controller.app.Get("/", controller.home)
+	return controller
 }
 
-func (c *MainController) RegisterRoutes() {
-	c.App.Get("/", c.Home)
+func (c *MainController) GetApp() *fiber.App {
+	return c.app
 }
 
-func (c *MainController) Home(ctx *fiber.Ctx) error {
-	htop := scheduler.GetScheduler().HtopTask
+func (c *MainController) home(ctx *fiber.Ctx) error {
+	htop := scheduler.Get().HtopTask
 
 	return ctx.SendString(fmt.Sprintf("CPU: %v", htop.CPU))
 }
