@@ -6,6 +6,8 @@ import (
 	"surena/node/server/controllers"
 )
 
+var server *Server
+
 type Server struct {
 	Host string
 	Port int
@@ -16,11 +18,17 @@ func New(host string, port int) *Server {
 	app := fiber.New()
 	app.Mount("/", controllers.NewMainController())
 
-	return &Server{
+	server = &Server{
 		Host: host,
 		Port: port,
 		App:  app,
 	}
+
+	return server
+}
+
+func Get() *Server {
+	return server
 }
 
 func (s *Server) GetAddress() string {
@@ -31,5 +39,12 @@ func (s *Server) Start() {
 	err := s.App.Listen(s.GetAddress())
 	if err != nil {
 		panic(err)
+	}
+}
+
+func (s *Server) Stop() {
+	err := s.App.Shutdown()
+	if err != nil {
+		return
 	}
 }

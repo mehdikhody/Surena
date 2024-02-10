@@ -38,6 +38,6 @@ func New(path string) *Database {
 	return database
 }
 
-func GetDatabase() *Database {
+func Get() *Database {
 	return database
 }

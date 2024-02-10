@@ -30,7 +30,7 @@ func New(timezone string) *Scheduler {
 	return scheduler
 }
 
-func GetScheduler() *Scheduler {
+func Get() *Scheduler {
 	return scheduler
 }
 
