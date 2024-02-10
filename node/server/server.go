@@ -2,49 +2,96 @@ package server
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"os"
 	"strconv"
 	"surena/node/server/controllers"
 )
 
 var server *Server
+var serverInitialized = false
+var serverStarted = false
 
 type Server struct {
-	Host string
-	Port int
-	App  *fiber.App
+	host string
+	port int
+	app  *fiber.App
 }
 
-func New(host string, port int) *Server {
+func Initialize() *Server {
+	if serverInitialized {
+		panic("Server is already initialized")
+	}
+
 	app := fiber.New()
 	app.Mount("/", controllers.NewMainController())
 
 	server = &Server{
-		Host: host,
-		Port: port,
-		App:  app,
+		host: GetHost(),
+		port: GetPort(),
+		app:  app,
 	}
 
+	serverInitialized = true
 	return server
 }
 
 func Get() *Server {
+	if !serverInitialized {
+		panic("Server is not initialized")
+	}
+
 	return server
 }
 
-func (s *Server) GetAddress() string {
-	return s.Host + ":" + strconv.Itoa(s.Port)
+func GetHost() string {
+	host := os.Getenv("SERVER_HOST")
+	if host == "" {
+		host = "127.0.0.1"
+	}
+
+	return host
 }
 
-func (s *Server) Start() {
-	err := s.App.Listen(s.GetAddress())
+func GetPort() int {
+	port := os.Getenv("SERVER_PORT")
+	if port == "" {
+		port = "3000"
+	}
+
+	portInt, err := strconv.Atoi(port)
 	if err != nil {
 		panic(err)
 	}
+
+	return portInt
+}
+
+func (s *Server) GetAddress() string {
+	return s.host + ":" + strconv.Itoa(s.port)
+}
+
+func (s *Server) Start() {
+	if serverStarted {
+		panic("Server is already started")
+	}
+
+	err := s.app.Listen(s.GetAddress())
+	if err != nil {
+		panic(err)
+	}
+
+	serverStarted = true
 }
 
 func (s *Server) Stop() {
-	err := s.App.Shutdown()
+	if !serverStarted {
+		return
+	}
+
+	err := s.app.Shutdown()
 	if err != nil {
 		return
 	}
+
+	serverStarted = false
 }
