@@ -15,7 +15,7 @@ func main() {
 	}
 
 	database.Initialize()
-	xray.New()
+	xray.Initialize()
 	scheduler.Initialize()
 	server.Initialize()
 }
