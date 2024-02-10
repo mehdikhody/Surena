@@ -4,21 +4,28 @@ import (
 	"fmt"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"os"
+	"path/filepath"
 	"surena/node/database/models"
 )
 
 var database *Database
+var databaseInitialized = false
 
 type Database struct {
-	DB      *gorm.DB
+	db      *gorm.DB
 	Traffic *models.TrafficModel
 	User    *models.UserModel
 	Client  *models.ClientModel
 }
 
-func New(path string) *Database {
-	uri := fmt.Sprintf("file:%s?cache=shared", path)
-	file := sqlite.Open(uri)
+func New() *Database {
+	if databaseInitialized {
+		panic("Database already initialized")
+	}
+
+	databasePath := GetDatabaseFilePath()
+	file := sqlite.Open(fmt.Sprintf("file:%s?cache=shared", databasePath))
 	db, err := gorm.Open(file, &gorm.Config{
 		PrepareStmt:          true,
 		FullSaveAssociations: true,
@@ -29,15 +36,30 @@ func New(path string) *Database {
 	}
 
 	database = &Database{
-		DB:      db,
+		db:      db,
 		Traffic: models.NewTrafficModel(db),
 		User:    models.NewUserModel(db),
 		Client:  models.NewClientModel(db),
 	}
 
+	databaseInitialized = true
 	return database
 }
 
 func Get() *Database {
+	if !databaseInitialized {
+		panic("Database not initialized")
+	}
+
 	return database
+}
+
+func GetDatabaseFilePath() string {
+	dbpath := os.Getenv("DATABASE_PATH")
+	if dbpath == "" {
+		dbpath = "db/node.db"
+	}
+
+	absolutePath, _ := filepath.Abs(dbpath)
+	return absolutePath
 }
