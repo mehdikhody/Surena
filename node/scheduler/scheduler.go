@@ -1,14 +1,16 @@
 package scheduler
 
 import (
+	"errors"
 	"github.com/robfig/cron/v3"
 	"os"
 	"surena/node/scheduler/tasks"
+	"sync"
 	"time"
 )
 
 var scheduler *Scheduler
-var schedulerInitialized = false
+var schedulerOnce sync.Once
 var schedulerStarted = false
 
 type Scheduler struct {
@@ -17,32 +19,27 @@ type Scheduler struct {
 	XrayTask *tasks.XrayTask
 }
 
-func Initialize() *Scheduler {
-	if schedulerInitialized {
-		panic("Scheduler is already initialized")
-	}
-
-	timezone := GetTimezone()
-	location, err := time.LoadLocation(timezone)
-	if err != nil {
-		panic(err)
-	}
-
-	scheduler = &Scheduler{
-		cron: cron.New(
-			cron.WithLocation(location),
-			cron.WithSeconds(),
-		),
-	}
-
-	schedulerInitialized = true
-	return scheduler
-}
-
 func Get() *Scheduler {
-	if !schedulerInitialized {
-		panic("Scheduler is not initialized")
-	}
+	schedulerOnce.Do(func() {
+		timezone := GetTimezone()
+		location, err := time.LoadLocation(timezone)
+		if err != nil {
+			panic(err)
+		}
+
+		scheduler = &Scheduler{
+			cron: cron.New(
+				cron.WithLocation(location),
+				cron.WithSeconds(),
+			),
+		}
+
+		scheduler.HtopTask = tasks.NewHtopTask()
+		scheduler.cron.AddJob("@every 5s", scheduler.HtopTask)
+
+		scheduler.XrayTask = tasks.NewXrayTask()
+		scheduler.cron.AddJob("@every 5s", scheduler.XrayTask)
+	})
 
 	return scheduler
 }
@@ -56,26 +53,22 @@ func GetTimezone() string {
 	return timezone
 }
 
-func (s *Scheduler) Start() {
+func (s *Scheduler) Start() error {
 	if schedulerStarted {
-		return
+		return errors.New("scheduler is already started")
 	}
-
-	s.HtopTask = tasks.NewHtopTask()
-	s.cron.AddJob("@every 1s", s.HtopTask)
-
-	s.XrayTask = tasks.NewXrayTask()
-	s.cron.AddJob("@every 1s", s.XrayTask)
 
 	schedulerStarted = true
 	s.cron.Start()
+	return nil
 }
 
-func (s *Scheduler) Stop() {
+func (s *Scheduler) Stop() error {
 	if !schedulerStarted {
-		return
+		return errors.New("scheduler is already stopped")
 	}
 
 	schedulerStarted = false
 	s.cron.Stop()
+	return nil
 }
