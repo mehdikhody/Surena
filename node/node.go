@@ -4,7 +4,7 @@ import (
 	"github.com/joho/godotenv"
 	"surena/node/scheduler"
 	"surena/node/server"
-	"surena/node/services"
+	"surena/node/utils"
 )
 
 type Node struct {
@@ -17,20 +17,27 @@ func main() {
 		panic(err)
 	}
 
-	logger, err := services.NewLogger("node")
+	logger, err := utils.NewLogger("node")
 	if err != nil {
 		panic(err)
 	}
+
+	node := &Node{}
+	go node.StartScheduler()
 
 	logger.Debug("Starting node")
 	server.Initialize().Start()
 }
 
-//
-//func (n *Node) StartScheduler() {
-//	n.scheduler = scheduler.Get()
-//	err := n.scheduler.Start()
-//	if err != nil {
-//		panic(err)
-//	}
-//}
+func (n *Node) StartScheduler() {
+	var err error
+	n.scheduler, err = scheduler.Get()
+	if err != nil {
+		panic(err)
+	}
+
+	err = n.scheduler.Start()
+	if err != nil {
+		panic(err)
+	}
+}
