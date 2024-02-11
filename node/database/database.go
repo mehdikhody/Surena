@@ -7,10 +7,11 @@ import (
 	"os"
 	"path/filepath"
 	"surena/node/database/models"
+	"sync"
 )
 
 var database *Database
-var databaseInitialized = false
+var databaseOnce sync.Once
 
 type Database struct {
 	db      *gorm.DB
@@ -19,39 +20,30 @@ type Database struct {
 	Client  *models.ClientModel
 }
 
-func Initialize() *Database {
-	if databaseInitialized {
-		panic("Database already initialized")
-	}
+func Get() (*Database, error) {
+	var err error
+	databaseOnce.Do(func() {
+		databasePath := GetFilePath()
+		databaseUri := fmt.Sprintf("file:%s?cache=shared", databasePath)
+		file := sqlite.Open(databaseUri)
 
-	databasePath := GetFilePath()
-	file := sqlite.Open(fmt.Sprintf("file:%s?cache=shared", databasePath))
-	db, err := gorm.Open(file, &gorm.Config{
-		PrepareStmt:          true,
-		FullSaveAssociations: true,
+		database = &Database{}
+		database.db, err = gorm.Open(file, &gorm.Config{
+			PrepareStmt:          true,
+			FullSaveAssociations: true,
+		})
+
+		if err != nil {
+			return
+		}
+
+		database.Client, err = models.NewClientModel(database.db)
+		if err != nil {
+			return
+		}
 	})
 
-	if err != nil {
-		panic("failed to connect database")
-	}
-
-	database = &Database{
-		db:      db,
-		Traffic: models.NewTrafficModel(db),
-		User:    models.NewUserModel(db),
-		Client:  models.NewClientModel(db),
-	}
-
-	databaseInitialized = true
-	return database
-}
-
-func Get() *Database {
-	if !databaseInitialized {
-		panic("Database not initialized")
-	}
-
-	return database
+	return database, err
 }
 
 func GetFilePath() string {
