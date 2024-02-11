@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"fmt"
 	"github.com/robfig/cron/v3"
 )
 
@@ -14,4 +15,5 @@ func NewXrayTask() *XrayTask {
 
 func (t *XrayTask) Run() {
 	// Do something
+	fmt.Println("XrayTask")
 }

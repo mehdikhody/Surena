@@ -3,7 +3,6 @@ package controllers
 import (
 	"fmt"
 	"github.com/gofiber/fiber/v2"
-	"surena/node/scheduler"
 )
 
 var controller *MainController
@@ -30,7 +29,5 @@ func (c *MainController) GetApp() *fiber.App {
 }
 
 func (c *MainController) home(ctx *fiber.Ctx) error {
-	htop := scheduler.Get().HtopTask
-
-	return ctx.SendString(fmt.Sprintf("CPU: %v", htop.CPU))
+	return ctx.SendString(fmt.Sprintf("CPU: %v", 1))
 }
