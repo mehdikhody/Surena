@@ -5,27 +5,18 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-var controller *MainController
-
 type MainController struct {
 	app *fiber.App
 }
 
-func NewMainController() *MainController {
-	if controller != nil {
-		return controller
-	}
-
+func NewMainController(module *fiber.App) *MainController {
 	controller := &MainController{
 		app: fiber.New(),
 	}
 
 	controller.app.Get("/", controller.home)
+	module.Mount("/", controller.app)
 	return controller
-}
-
-func (c *MainController) GetApp() *fiber.App {
-	return c.app
 }
 
 func (c *MainController) home(ctx *fiber.Ctx) error {
