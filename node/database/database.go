@@ -6,8 +6,6 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"os"
-	"path/filepath"
 	"surena/node/database/models"
 	"surena/node/utils"
 )
@@ -34,7 +32,7 @@ func init() {
 
 	logger.Info("Initializing database")
 
-	databasePath := GetFilePath()
+	databasePath := utils.GetDatabasePath()
 	logger.Infof("Database path: %s", databasePath)
 
 	databaseUri := fmt.Sprintf("file:%s?cache=shared", databasePath)
@@ -57,20 +55,11 @@ func init() {
 	}
 
 	database = &db{
-		gorm:   gorm,
 		logger: logger,
+		dbpath: databasePath,
+		gorm:   gorm,
 		client: clientModel,
 	}
-}
-
-func GetFilePath() string {
-	dbpath := os.Getenv("DATABASE_PATH")
-	if dbpath == "" {
-		dbpath = "db/node.db"
-	}
-
-	absolutePath, _ := filepath.Abs(dbpath)
-	return absolutePath
 }
 
 func Get() (DBInterface, error) {
