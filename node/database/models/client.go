@@ -20,20 +20,32 @@ type Client struct {
 }
 
 type ClientModel struct {
-	db *gorm.DB
+	gorm *gorm.DB
 }
 
-func NewClientModel(db *gorm.DB) (*ClientModel, error) {
+func NewClientModel(gorm *gorm.DB) (*ClientModel, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	if err := db.WithContext(ctx).AutoMigrate(&Client{}); err != nil {
+	if err := gorm.WithContext(ctx).AutoMigrate(&Client{}); err != nil {
 		return nil, err
 	}
 
 	return &ClientModel{
-		db: db,
+		gorm: gorm,
 	}, nil
+}
+
+func (m *ClientModel) Find(client *Client) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	find := m.gorm.WithContext(ctx).Preload("Traffic").Where(client)
+	if err := find.First(client).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (m *ClientModel) Create(email string) (*Client, error) {
@@ -41,7 +53,7 @@ func (m *ClientModel) Create(email string) (*Client, error) {
 	client.Lock()
 	defer client.Unlock()
 
-	if err := m.db.Create(client).Error; err != nil {
+	if err := m.gorm.Create(client).Error; err != nil {
 		return nil, err
 	}
 
@@ -53,17 +65,14 @@ func (m *ClientModel) UpdateTraffic(email string, upload uint64, download uint64
 	client.Lock()
 	defer client.Unlock()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	if err := m.db.WithContext(ctx).Preload("Traffic").Where(client).First(client).Error; err != nil {
+	if err := m.Find(client); err != nil {
 		return nil, err
 	}
 
 	client.Traffic.Upload += upload
 	client.Traffic.Download += download
 
-	if err := m.db.Save(client).Error; err != nil {
+	if err := m.gorm.Save(client).Error; err != nil {
 		return nil, err
 	}
 
