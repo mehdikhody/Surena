@@ -1,7 +1,7 @@
 package database
 
 import (
-	errors "errors"
+	"errors"
 	"fmt"
 	"go.uber.org/zap"
 	"gorm.io/driver/sqlite"
