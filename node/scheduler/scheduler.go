@@ -1,7 +1,6 @@
 package scheduler
 
 import (
-	"errors"
 	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
 	"surena/node/env"
@@ -30,10 +29,10 @@ type SchedulerInterface interface {
 
 func init() {
 	logger := utils.CreateLogger("scheduler")
-	logger.Info("initializing scheduler")
+	logger.Debug("initializing scheduler")
 
 	timezone := env.GetTimezone()
-	logger.Infof("timezone: %s", timezone)
+	logger.Debugf("timezone: %s", timezone)
 
 	location, err := time.LoadLocation(timezone)
 	if err != nil {
@@ -56,12 +55,12 @@ func init() {
 	scheduler.Start()
 }
 
-func Get() (SchedulerInterface, error) {
+func Get() SchedulerInterface {
 	if scheduler == nil {
-		return nil, errors.New("scheduler is not initialized")
+		panic("scheduler is not initialized")
 	}
 
-	return scheduler, nil
+	return scheduler
 }
 
 func (s *Scheduler) IsRunning() bool {
