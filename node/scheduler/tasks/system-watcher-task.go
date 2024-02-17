@@ -25,7 +25,7 @@ type SystemWatcherTaskInterface interface {
 
 func NewSystemWatcherTask(cron *cron.Cron) SystemWatcherTaskInterface {
 	logger := utils.CreateLogger("system-watcher-task")
-	logger.Info("Creating htop task")
+	logger.Info("Creating system watcher task")
 
 	task := &SystemWatcherTask{
 		Logger:   logger,
