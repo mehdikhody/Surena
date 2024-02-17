@@ -1,11 +1,12 @@
 package database
 
 import (
-	"errors"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"os"
+	"path/filepath"
 	"surena/node/database/models"
 	"surena/node/env"
 	"surena/node/utils"
@@ -15,22 +16,23 @@ var database *Database
 
 type Database struct {
 	DatabaseInterface
-	Logger   *logrus.Entry
-	Filepath string
-	DB       *gorm.DB
-	Client   models.ClientModelInterface
+	Logger      *logrus.Entry
+	Filepath    string
+	DB          *gorm.DB
+	ClientModel models.ClientModelInterface
 }
 
 type DatabaseInterface interface {
-	GetClient() (models.ClientModelInterface, error)
+	GetClientModel() models.ClientModelInterface
 }
 
 func init() {
 	logger := utils.CreateLogger("database")
-	logger.Info("Initializing database")
+	logger.Debug("Initializing database")
 
 	databasePath := env.GetDatabasePath()
-	logger.Infof("Database path: %s", databasePath)
+	os.MkdirAll(filepath.Dir(databasePath), os.ModePerm)
+	logger.Debug("Database path: %s", databasePath)
 
 	databaseUri := fmt.Sprintf("file:%s?cache=shared", databasePath)
 	file := sqlite.Open(databaseUri)
@@ -52,25 +54,21 @@ func init() {
 	}
 
 	database = &Database{
-		Logger:   logger,
-		Filepath: databasePath,
-		DB:       db,
-		Client:   clientModel,
+		Logger:      logger,
+		Filepath:    databasePath,
+		DB:          db,
+		ClientModel: clientModel,
 	}
 }
 
-func Get() (DatabaseInterface, error) {
+func Get() DatabaseInterface {
 	if database == nil {
-		return nil, errors.New("database is not initialized")
+		panic("database is not initialized")
 	}
 
-	return database, nil
+	return database
 }
 
-func (d *Database) GetClient() (models.ClientModelInterface, error) {
-	if d.Client == nil {
-		return nil, errors.New("client model is not initialized")
-	}
-
-	return d.Client, nil
+func (d *Database) GetClientModel() models.ClientModelInterface {
+	return d.ClientModel
 }
