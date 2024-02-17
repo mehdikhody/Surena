@@ -3,42 +3,39 @@ package database
 import (
 	"errors"
 	"fmt"
-	"go.uber.org/zap"
+	"github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"surena/node/database/models"
+	"surena/node/env"
 	"surena/node/utils"
 )
 
-var database *db
+var database *Database
 
-type db struct {
-	logger *zap.SugaredLogger
-	dbpath string
-	gorm   *gorm.DB
-	client *models.ClientModel
+type Database struct {
+	DatabaseInterface
+	Logger   *logrus.Entry
+	Filepath string
+	DB       *gorm.DB
+	Client   models.ClientModelInterface
 }
 
-type DBInterface interface {
-	GetClient() (*models.ClientModel, error)
+type DatabaseInterface interface {
+	GetClient() (models.ClientModelInterface, error)
 }
 
 func init() {
-	logger, err := utils.NewLogger("database")
-	if err != nil {
-		fmt.Println("Failed to create logger for database")
-		return
-	}
-
+	logger := utils.CreateLogger("database")
 	logger.Info("Initializing database")
 
-	databasePath := utils.GetDatabasePath()
+	databasePath := env.GetDatabasePath()
 	logger.Infof("Database path: %s", databasePath)
 
 	databaseUri := fmt.Sprintf("file:%s?cache=shared", databasePath)
 	file := sqlite.Open(databaseUri)
 
-	gorm, err := gorm.Open(file, &gorm.Config{
+	db, err := gorm.Open(file, &gorm.Config{
 		PrepareStmt:          true,
 		FullSaveAssociations: true,
 	})
@@ -48,21 +45,21 @@ func init() {
 		return
 	}
 
-	clientModel, err := models.NewClientModel(gorm)
+	clientModel, err := models.NewClientModel(db)
 	if err != nil {
 		logger.Warn("Failed to create client model")
 		return
 	}
 
-	database = &db{
-		logger: logger,
-		dbpath: databasePath,
-		gorm:   gorm,
-		client: clientModel,
+	database = &Database{
+		Logger:   logger,
+		Filepath: databasePath,
+		DB:       db,
+		Client:   clientModel,
 	}
 }
 
-func Get() (DBInterface, error) {
+func Get() (DatabaseInterface, error) {
 	if database == nil {
 		return nil, errors.New("database is not initialized")
 	}
@@ -70,10 +67,10 @@ func Get() (DBInterface, error) {
 	return database, nil
 }
 
-func (d *db) GetClient() (*models.ClientModel, error) {
-	if d.client == nil {
+func (d *Database) GetClient() (models.ClientModelInterface, error) {
+	if d.Client == nil {
 		return nil, errors.New("client model is not initialized")
 	}
 
-	return d.client, nil
+	return d.Client, nil
 }
