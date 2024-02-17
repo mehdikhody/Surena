@@ -20,27 +20,38 @@ type Client struct {
 }
 
 type ClientModel struct {
-	gorm *gorm.DB
+	ClientModelInterface
+	DB *gorm.DB
 }
 
-func NewClientModel(gorm *gorm.DB) (*ClientModel, error) {
+type ClientModelInterface interface {
+	Find(client *Client) error
+	FindByEmail(email string) (*Client, error)
+	Create(email string) (*Client, error)
+	UpdateTraffic(email string, upload uint64, download uint64) (*Client, error)
+}
+
+func NewClientModel(db *gorm.DB) (ClientModelInterface, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	if err := gorm.WithContext(ctx).AutoMigrate(&Client{}); err != nil {
+	if err := db.WithContext(ctx).AutoMigrate(&Client{}); err != nil {
 		return nil, err
 	}
 
 	return &ClientModel{
-		gorm: gorm,
+		DB: db,
 	}, nil
 }
 
 func (m *ClientModel) Find(client *Client) error {
+	client.Lock()
+	defer client.Unlock()
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	find := m.gorm.WithContext(ctx).Preload("Traffic").Where(client)
+	find := m.DB.WithContext(ctx).Preload("Traffic").Where(client)
 	if err := find.First(client).Error; err != nil {
 		return err
 	}
@@ -48,12 +59,21 @@ func (m *ClientModel) Find(client *Client) error {
 	return nil
 }
 
+func (m *ClientModel) FindByEmail(email string) (*Client, error) {
+	client := &Client{Email: email}
+	if err := m.Find(client); err != nil {
+		return nil, err
+	}
+
+	return client, nil
+}
+
 func (m *ClientModel) Create(email string) (*Client, error) {
 	client := &Client{Email: email}
 	client.Lock()
 	defer client.Unlock()
 
-	if err := m.gorm.Create(client).Error; err != nil {
+	if err := m.DB.Create(client).Error; err != nil {
 		return nil, err
 	}
 
@@ -72,7 +92,7 @@ func (m *ClientModel) UpdateTraffic(email string, upload uint64, download uint64
 	client.Traffic.Upload += upload
 	client.Traffic.Download += download
 
-	if err := m.gorm.Save(client).Error; err != nil {
+	if err := m.DB.Save(client).Error; err != nil {
 		return nil, err
 	}
 
