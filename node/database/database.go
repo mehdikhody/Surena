@@ -32,7 +32,7 @@ func init() {
 
 	databasePath := env.GetDatabasePath()
 	os.MkdirAll(filepath.Dir(databasePath), os.ModePerm)
-	logger.Debug("Database path: %s", databasePath)
+	logger.Debugf("Database path: %s", databasePath)
 
 	databaseUri := fmt.Sprintf("file:%s?cache=shared", databasePath)
 	file := sqlite.Open(databaseUri)
