@@ -6,11 +6,13 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/sirupsen/logrus"
 	"surena/node/utils"
+	"sync"
 	"time"
 )
 
 type SystemWatcherTask struct {
 	SystemWatcherTaskInterface
+	sync.Mutex
 	Logger   *logrus.Entry
 	Cron     *cron.Cron
 	ID       cron.EntryID
@@ -81,7 +83,7 @@ func (t *SystemWatcherTask) checkCPU() {
 }
 
 func (t *SystemWatcherTask) run() {
-	t.Logger.Trace("Running htop task")
+	t.Logger.Trace("Running system watcher task")
 
 	t.checkSwap()
 	t.checkRAM()
@@ -89,10 +91,15 @@ func (t *SystemWatcherTask) run() {
 }
 
 func (t *SystemWatcherTask) IsRunning() bool {
+	t.Lock()
+	defer t.Unlock()
 	return t.ID != 0
 }
 
 func (t *SystemWatcherTask) Start() {
+	t.Lock()
+	defer t.Unlock()
+
 	if t.ID != 0 {
 		t.Logger.Warn("htop task is already running")
 		return
@@ -109,6 +116,9 @@ func (t *SystemWatcherTask) Start() {
 }
 
 func (t *SystemWatcherTask) Stop() {
+	t.Lock()
+	defer t.Unlock()
+
 	if t.ID == 0 {
 		t.Logger.Warn("htop task is already stopped")
 		return
