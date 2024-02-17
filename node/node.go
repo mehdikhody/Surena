@@ -2,16 +2,15 @@ package main
 
 import (
 	_ "surena/node/database"
-	_ "surena/node/scheduler"
+	"surena/node/scheduler"
 	"surena/node/server"
-	_ "surena/node/xray"
-	"time"
+	"surena/node/xray"
 )
 
 func main() {
-	// Wait for other services to initialize
-	// and then start the server.
-	time.Sleep(2 * time.Second)
+	defer xray.Get().GetCore().Stop()
+	defer scheduler.Get().Stop()
+	defer server.Get().Stop()
 
 	server.Get().Start()
 }
