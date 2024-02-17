@@ -3,7 +3,9 @@ package core
 import (
 	"bufio"
 	"github.com/sirupsen/logrus"
+	"github.com/xtls/xray-core/common/errors"
 	"os/exec"
+	"path/filepath"
 	"surena/node/env"
 	"surena/node/utils"
 	"sync"
@@ -33,7 +35,7 @@ type CoreInterface interface {
 }
 
 func init() {
-	logger := utils.CreateLogger("xray-core")
+	logger := utils.CreateLogger("xray").WithField("module", "core")
 	logger.Debug("initializing xray core")
 
 	core = &Core{
@@ -48,8 +50,12 @@ func init() {
 	core.Start()
 }
 
-func Get() CoreInterface {
-	return core
+func Get() (CoreInterface, error) {
+	if core == nil {
+		return nil, errors.New("xray core not initialized")
+	}
+
+	return core, nil
 }
 
 func (c *Core) IsRunning() bool {
@@ -65,7 +71,9 @@ func (c *Core) Start() {
 		return
 	}
 
-	cmd := exec.Command(c.ExecutablePath, "-c", c.ConfigPath)
+	configDir := filepath.Dir(c.ConfigPath)
+	configFilename := filepath.Base(c.ConfigPath)
+	cmd := exec.Command(c.ExecutablePath, "-c", configFilename, "-confdir", configDir)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -82,7 +90,7 @@ func (c *Core) Start() {
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
 			line := scanner.Text()
-			c.Logger.WithField("module", "Xray").Trace(line)
+			c.Logger.Trace(line)
 			for _, listener := range c.LogListeners {
 				listener(line)
 			}
