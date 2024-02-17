@@ -3,22 +3,35 @@ package controllers
 import (
 	"fmt"
 	"github.com/gofiber/fiber/v2"
+	"surena/node/database"
 )
 
 type MainController struct {
-	app *fiber.App
+	MainControllerInterface
+	Controller *fiber.App
+	App        *fiber.App
 }
 
-func NewMainController(module *fiber.App) *MainController {
-	controller := &MainController{
-		app: fiber.New(),
+type MainControllerInterface interface {
+	home(ctx *fiber.Ctx) error
+}
+
+func NewMainController(app *fiber.App) MainControllerInterface {
+	c := &MainController{
+		App:        app,
+		Controller: fiber.New(),
 	}
 
-	controller.app.Get("/", controller.home)
-	module.Mount("/", controller.app)
-	return controller
+	c.Controller.Get("/", c.home)
+	c.App.Mount("/", c.Controller)
+	return c
 }
 
 func (c *MainController) home(ctx *fiber.Ctx) error {
-	return ctx.SendString(fmt.Sprintf("CPU: %v", 1))
+	client, err := database.Get().GetClientModel().Create("test")
+	if err != nil {
+		return ctx.SendString(fmt.Sprintf("Error: %v", err))
+	}
+
+	return ctx.SendString(fmt.Sprintf("Client ID:", client.ID))
 }
