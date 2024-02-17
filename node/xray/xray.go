@@ -1,53 +1,30 @@
 package xray
 
 import (
-	"surena/node/xray/api"
 	"surena/node/xray/core"
 )
 
 var xray *Xray
-var xrayInitialized bool = false
 
 type Xray struct {
-	core *core.Core
-	api  *api.API
+	XrayInterface
+	Core core.CoreInterface
 }
 
-func Initialize() *Xray {
-	if xrayInitialized {
-		panic("Xray already initialized")
+type XrayInterface interface {
+	GetCore() core.CoreInterface
+}
+
+func init() {
+	xray = &Xray{
+		Core: core.Get(),
 	}
+}
 
-	xray = &Xray{}
-
-	var err error
-
-	xray.core, err = core.New()
-	if err != nil {
-		panic(err)
-	}
-
-	xray.api, err = api.New("127.0.0.1", 30002)
-	if err != nil {
-		panic(err)
-	}
-
-	xrayInitialized = true
+func Get() XrayInterface {
 	return xray
 }
 
-func Get() *Xray {
-	if !xrayInitialized {
-		panic("Xray not initialized")
-	}
-
-	return xray
-}
-
-func (x *Xray) GetCore() *core.Core {
-	return x.core
-}
-
-func (x *Xray) GetAPI() *api.API {
-	return x.api
+func (x *Xray) GetCore() core.CoreInterface {
+	return x.Core
 }
