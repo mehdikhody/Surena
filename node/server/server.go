@@ -1,10 +1,10 @@
 package server
 
 import (
-	"errors"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
-	"go.uber.org/zap"
+	"github.com/sirupsen/logrus"
+	"surena/node/env"
 	"surena/node/server/controllers"
 	"surena/node/utils"
 )
@@ -13,73 +13,77 @@ var server *Server
 
 type Server struct {
 	ServerInterface
-	logger         *zap.SugaredLogger
-	host           string
-	port           int
-	app            *fiber.App
-	isRunning      bool
-	mainController *controllers.MainController
+	Logger         *logrus.Entry
+	Host           string
+	Port           int
+	App            *fiber.App
+	Started        bool
+	MainController controllers.MainControllerInterface
 }
 
 type ServerInterface interface {
+	IsRunning() bool
 	Start()
 	Stop()
-	GetMainController() *controllers.MainController
+	GetMainController() controllers.MainControllerInterface
 }
 
 func init() {
-	logger, err := utils.NewLogger("scheduler")
-	if err != nil {
-		fmt.Println("failed to create logger for server")
-		return
-	}
+	logger := utils.CreateLogger("server")
+	logger.Debug("initializing server")
 
 	app := fiber.New()
 	server = &Server{
-		logger:         logger,
-		host:           utils.GetServerHost(),
-		port:           utils.GetServerPort(),
-		app:            app,
-		isRunning:      false,
-		mainController: controllers.NewMainController(app),
+		Logger:         logger,
+		Host:           env.GetServerHost(),
+		Port:           env.GetServerPort(),
+		App:            app,
+		Started:        false,
+		MainController: controllers.NewMainController(app),
 	}
 }
 
-func Get() (*Server, error) {
+func Get() ServerInterface {
 	if server == nil {
-		return nil, errors.New("server is not initialized")
+		panic("server is not initialized")
 	}
 
-	return server, nil
+	return server
 }
 
 func (s *Server) Start() {
-	if s.isRunning {
-		s.logger.Warn("server is already running")
+	if s.Started {
+		s.Logger.Warn("server is already running")
 		return
 	}
 
-	address := fmt.Sprintf("%s:%d", s.host, s.port)
-	err := s.app.Listen(address)
+	address := fmt.Sprintf("%s:%d", s.Host, s.Port)
+	err := s.App.Listen(address)
 	if err != nil {
-		s.logger.Error("failed to start server", err)
+		s.Logger.Error("failed to start server", err)
 		return
 	}
 
-	s.isRunning = true
+	s.Logger.Infof("server is running on %s", address)
+	s.Started = true
 }
 
 func (s *Server) Stop() {
-	if !s.isRunning {
-		s.logger.Warn("server is not running")
+	if !s.Started {
+		s.Logger.Warn("server is not running")
 		return
 	}
 
-	err := s.app.Shutdown()
+	err := s.App.Shutdown()
 	if err != nil {
-		s.logger.Error("failed to shutdown server", err)
+		s.Logger.Error("failed to shutdown server", err)
 		return
 	}
 
-	s.isRunning = false
+	s.Logger.Info("server is stopped")
+	s.Started = false
+}
+
+func (s *Server) GetMainController() controllers.MainControllerInterface {
+	return s.MainController
 }
