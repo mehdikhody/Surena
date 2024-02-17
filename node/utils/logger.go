@@ -1,78 +1,60 @@
 package utils
 
 import (
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+	"fmt"
+	nested "github.com/antonfisher/nested-logrus-formatter"
+	"github.com/rifflock/lfshook"
+	"github.com/sirupsen/logrus"
 	"os"
-	"path/filepath"
+	"strings"
+	"surena/node/env"
 )
 
-func NewLogger(name string) (*zap.SugaredLogger, error) {
-	err := makeLogsDirectory()
-	if err != nil {
-		return nil, err
-	}
+func CreateLogger(name string) *logrus.Entry {
+	logger := logrus.New()
 
-	logFile := getLogFile(name)
-	logLevel := getZapLogLevel()
+	// set log level
+	logLevel := getLogrusLevel(env.GetLogLevel())
+	logger.SetLevel(logLevel)
 
-	config := zap.NewProductionConfig()
-	config.Encoding = "console"
-	config.Level = zap.NewAtomicLevelAt(logLevel)
-	config.OutputPaths = []string{"stdout", logFile}
-	config.ErrorOutputPaths = []string{"stderr", logFile}
+	// set log format
+	logger.SetFormatter(&nested.Formatter{
+		HideKeys:    true,
+		FieldsOrder: []string{"label", "module"},
+	})
 
-	logger, err := config.Build()
-	if err != nil {
-		return nil, err
-	}
+	// set log output to stdout
+	logger.SetOutput(os.Stdout)
 
-	sugar := logger.Sugar()
-	defer sugar.Sync()
+	// set log output to file
+	logDirectory := env.GetLogDirectory()
+	logger.Hooks.Add(lfshook.NewHook(
+		lfshook.PathMap{
+			logrus.TraceLevel: fmt.Sprintf("%s/%s.log", logDirectory, name),
+			logrus.DebugLevel: fmt.Sprintf("%s/%s.log", logDirectory, name),
+			logrus.InfoLevel:  fmt.Sprintf("%s/%s.log", logDirectory, name),
+			logrus.WarnLevel:  fmt.Sprintf("%s/%s.log", logDirectory, name),
+			logrus.ErrorLevel: fmt.Sprintf("%s/%s-error.log", logDirectory, name),
+			logrus.FatalLevel: fmt.Sprintf("%s/%s-error.log", logDirectory, name),
+			logrus.PanicLevel: fmt.Sprintf("%s/%s-error.log", logDirectory, name),
+		},
+		&logrus.JSONFormatter{},
+	))
 
-	return sugar, nil
+	return logger.WithField("label", name)
 }
 
-func GetLogsDirectory() string {
-	logsDirectory := os.Getenv("LOGS_DIRECTORY")
-	if logsDirectory == "" {
-		logsDirectory = "logs"
-	}
-
-	absolutePath, _ := filepath.Abs(logsDirectory)
-	return absolutePath
-}
-
-func GetLogLevel() string {
-	logLevel := os.Getenv("LOG_LEVEL")
-	if logLevel == "" {
-		logLevel = "info"
-	}
-
-	return logLevel
-}
-
-func makeLogsDirectory() error {
-	logsDirectory := GetLogsDirectory()
-	return os.MkdirAll(logsDirectory, os.ModePerm)
-}
-
-func getLogFile(name string) string {
-	logsDirectory := GetLogsDirectory()
-	return filepath.Join(logsDirectory, name+".log")
-}
-
-func getZapLogLevel() zapcore.Level {
-	switch GetLogLevel() {
+func getLogrusLevel(level string) logrus.Level {
+	switch strings.ToLower(level) {
 	case "debug":
-		return zapcore.DebugLevel
+		return logrus.DebugLevel
 	case "info":
-		return zapcore.InfoLevel
+		return logrus.InfoLevel
 	case "warn":
-		return zapcore.WarnLevel
+		return logrus.WarnLevel
 	case "error":
-		return zapcore.ErrorLevel
+		return logrus.ErrorLevel
 	default:
-		return zapcore.InfoLevel
+		return logrus.InfoLevel
 	}
 }
