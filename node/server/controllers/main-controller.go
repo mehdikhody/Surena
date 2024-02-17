@@ -1,9 +1,7 @@
 package controllers
 
 import (
-	"fmt"
 	"github.com/gofiber/fiber/v2"
-	"surena/node/database"
 )
 
 type MainController struct {
@@ -28,10 +26,5 @@ func NewMainController(app *fiber.App) MainControllerInterface {
 }
 
 func (c *MainController) home(ctx *fiber.Ctx) error {
-	client, err := database.Get().GetClientModel().Create("test")
-	if err != nil {
-		return ctx.SendString(fmt.Sprintf("Error: %v", err))
-	}
-
-	return ctx.SendString(fmt.Sprintf("Client ID:", client.ID))
+	return ctx.SendString("Hello World!")
 }
