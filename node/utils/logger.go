@@ -34,9 +34,9 @@ func CreateLogger(name string) *logrus.Entry {
 			logrus.DebugLevel: fmt.Sprintf("%s/%s.log", logDirectory, name),
 			logrus.InfoLevel:  fmt.Sprintf("%s/%s.log", logDirectory, name),
 			logrus.WarnLevel:  fmt.Sprintf("%s/%s.log", logDirectory, name),
-			logrus.ErrorLevel: fmt.Sprintf("%s/%s-error.log", logDirectory, name),
-			logrus.FatalLevel: fmt.Sprintf("%s/%s-error.log", logDirectory, name),
-			logrus.PanicLevel: fmt.Sprintf("%s/%s-error.log", logDirectory, name),
+			logrus.ErrorLevel: fmt.Sprintf("%s/%s.log", logDirectory, name),
+			logrus.FatalLevel: fmt.Sprintf("%s/%s.log", logDirectory, name),
+			logrus.PanicLevel: fmt.Sprintf("%s/%s.log", logDirectory, name),
 		},
 		&logrus.JSONFormatter{},
 	))
@@ -46,6 +46,8 @@ func CreateLogger(name string) *logrus.Entry {
 
 func getLogrusLevel(level string) logrus.Level {
 	switch strings.ToLower(level) {
+	case "trace":
+		return logrus.TraceLevel
 	case "debug":
 		return logrus.DebugLevel
 	case "info":
