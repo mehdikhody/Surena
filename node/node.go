@@ -1,16 +1,25 @@
 package main
 
 import (
-	_ "surena/node/database"
+	"surena/node/database"
+	_ "surena/node/env"
 	"surena/node/scheduler"
-	"surena/node/server"
-	"surena/node/xray"
+	"surena/node/utils"
 )
 
 func main() {
-	defer xray.Get().GetCore().Stop()
-	defer scheduler.Get().Stop()
-	defer server.Get().Stop()
+	logger := utils.CreateLogger("main")
 
-	server.Get().Start()
+	_, err := database.Initialize()
+	if err != nil {
+		logger.Panic("Failed to initialize database")
+	}
+
+	sch, err := scheduler.Initialize()
+	if err != nil {
+		logger.Panic("Failed to initialize scheduler")
+	}
+
+	sch.Start()
+	defer sch.Stop()
 }
