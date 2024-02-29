@@ -22,7 +22,7 @@ func NewStatsService(client *grpc.ClientConn) *StatsService {
 }
 
 func (s *StatsService) QueryStats(reset bool) (*command.QueryStatsResponse, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*45)
 	defer cancel()
 
 	stats, err := s.service.QueryStats(ctx, &command.QueryStatsRequest{
