@@ -2,7 +2,6 @@ package database
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"os"
@@ -13,10 +12,10 @@ import (
 )
 
 var database *Database
+var logger = utils.CreateLogger("database")
 
 type Database struct {
 	DatabaseInterface
-	Logger      *logrus.Entry
 	Filepath    string
 	DB          *gorm.DB
 	ClientModel models.ClientModelInterface
@@ -26,8 +25,7 @@ type DatabaseInterface interface {
 	GetClientModel() models.ClientModelInterface
 }
 
-func init() {
-	logger := utils.CreateLogger("database")
+func Initialize() (DatabaseInterface, error) {
 	logger.Debug("Initializing database")
 
 	databasePath := env.GetDatabasePath()
@@ -44,21 +42,23 @@ func init() {
 
 	if err != nil {
 		logger.Warn("Failed to open database")
-		return
+		return nil, err
 	}
 
 	clientModel, err := models.NewClientModel(db)
 	if err != nil {
 		logger.Warn("Failed to create client model")
-		return
+		return nil, err
 	}
 
 	database = &Database{
-		Logger:      logger,
 		Filepath:    databasePath,
 		DB:          db,
 		ClientModel: clientModel,
 	}
+
+	logger.Debug("Database initialized")
+	return database, nil
 }
 
 func Get() DatabaseInterface {
