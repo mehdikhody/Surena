@@ -3,6 +3,7 @@ package scheduler
 import (
 	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
+	"github.com/xtls/xray-core/common/errors"
 	"surena/node/env"
 	"surena/node/scheduler/tasks"
 	"surena/node/utils"
@@ -28,7 +29,7 @@ type SchedulerInterface interface {
 	Stop()
 }
 
-func Initialize() (SchedulerInterface, error) {
+func init() {
 	logger.Debug("initializing scheduler")
 
 	timezone := env.GetTimezone()
@@ -37,7 +38,7 @@ func Initialize() (SchedulerInterface, error) {
 	location, err := time.LoadLocation(timezone)
 	if err != nil {
 		logger.Warn("failed to load timezone location")
-		return nil, err
+		return
 	}
 
 	cronjob := cron.New(
@@ -49,6 +50,12 @@ func Initialize() (SchedulerInterface, error) {
 		Started:           false,
 		Cron:              cronjob,
 		SystemWatcherTask: tasks.NewSystemWatcherTask(cronjob),
+	}
+}
+
+func Initialize() (SchedulerInterface, error) {
+	if scheduler == nil {
+		return nil, errors.New("scheduler is not initialized")
 	}
 
 	return scheduler, nil
