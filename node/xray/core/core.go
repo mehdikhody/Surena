@@ -12,6 +12,7 @@ import (
 )
 
 var core *Core
+var logger = utils.CreateLogger("xray").WithField("module", "core")
 
 type Core struct {
 	CoreInterface
@@ -35,7 +36,6 @@ type CoreInterface interface {
 }
 
 func init() {
-	logger := utils.CreateLogger("xray").WithField("module", "core")
 	logger.Debug("initializing xray core")
 
 	core = &Core{
@@ -46,16 +46,22 @@ func init() {
 		Started:        false,
 		LogListeners:   make(map[uint]func(log string)),
 	}
-
-	core.Start()
 }
 
-func Get() (CoreInterface, error) {
+func Initialize() (CoreInterface, error) {
 	if core == nil {
 		return nil, errors.New("xray core not initialized")
 	}
 
 	return core, nil
+}
+
+func Get() CoreInterface {
+	if core == nil {
+		panic("xray core not initialized")
+	}
+
+	return core
 }
 
 func (c *Core) IsRunning() bool {
@@ -66,14 +72,16 @@ func (c *Core) Start() {
 	c.Lock()
 	defer c.Unlock()
 
+	logger.Info("starting xray core")
+
 	if c.IsRunning() {
-		c.Logger.Warn("xray core is already running")
+		logger.Warn("xray core is already running")
 		return
 	}
 
 	configDir := filepath.Dir(c.ConfigPath)
-	configFilename := filepath.Base(c.ConfigPath)
-	cmd := exec.Command(c.ExecutablePath, "-c", configFilename, "-confdir", configDir)
+	logger.Info(c.ExecutablePath, " -c ./", c.ConfigPath, " -confdir ", configDir)
+	cmd := exec.Command(c.ExecutablePath, "-c", c.ConfigPath, "-confdir", configDir)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -86,13 +94,24 @@ func (c *Core) Start() {
 		return
 	}
 
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
 	go func() {
 		scanner := bufio.NewScanner(stdout)
+		isReady := false
+
 		for scanner.Scan() {
 			line := scanner.Text()
 			c.Logger.Trace(line)
 			for _, listener := range c.LogListeners {
 				listener(line)
+			}
+
+			// xray core is ready
+			if !isReady && len(line) > 5 && line[:5] == "Xray " {
+				isReady = true
+				wg.Done()
 			}
 		}
 
@@ -110,6 +129,7 @@ func (c *Core) Start() {
 		}
 	}()
 
+	wg.Wait()
 	c.Logger.Info("xray core started")
 }
 
