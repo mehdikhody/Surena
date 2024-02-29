@@ -11,6 +11,7 @@ import (
 )
 
 var scheduler *Scheduler
+var logger = utils.CreateLogger("scheduler")
 
 type Scheduler struct {
 	SchedulerInterface
@@ -27,8 +28,7 @@ type SchedulerInterface interface {
 	Stop()
 }
 
-func init() {
-	logger := utils.CreateLogger("scheduler")
+func Initialize() (SchedulerInterface, error) {
 	logger.Debug("initializing scheduler")
 
 	timezone := env.GetTimezone()
@@ -37,7 +37,7 @@ func init() {
 	location, err := time.LoadLocation(timezone)
 	if err != nil {
 		logger.Warn("failed to load timezone location")
-		return
+		return nil, err
 	}
 
 	cronjob := cron.New(
@@ -46,13 +46,12 @@ func init() {
 	)
 
 	scheduler = &Scheduler{
-		Logger:            logger,
 		Started:           false,
 		Cron:              cronjob,
 		SystemWatcherTask: tasks.NewSystemWatcherTask(cronjob),
 	}
 
-	scheduler.Start()
+	return scheduler, nil
 }
 
 func Get() SchedulerInterface {
@@ -64,6 +63,8 @@ func Get() SchedulerInterface {
 }
 
 func (s *Scheduler) IsRunning() bool {
+	s.Lock()
+	defer s.Unlock()
 	return s.Started
 }
 
@@ -72,13 +73,13 @@ func (s *Scheduler) Start() {
 	defer s.Unlock()
 
 	if s.Started {
-		s.Logger.Warn("scheduler is already running")
+		logger.Warn("scheduler is already running")
 		return
 	}
 
 	s.Cron.Start()
 	s.Started = true
-	s.Logger.Info("scheduler started")
+	logger.Info("scheduler started")
 }
 
 func (s *Scheduler) Stop() {
@@ -86,11 +87,11 @@ func (s *Scheduler) Stop() {
 	defer s.Unlock()
 
 	if !s.Started {
-		s.Logger.Warn("Scheduler is already stopped")
+		logger.Warn("Scheduler is already stopped")
 		return
 	}
 
 	s.Cron.Stop()
 	s.Started = false
-	s.Logger.Info("scheduler stopped")
+	logger.Info("scheduler stopped")
 }
