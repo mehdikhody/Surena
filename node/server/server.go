@@ -3,22 +3,24 @@ package server
 import (
 	"fmt"
 	"github.com/gofiber/fiber/v2"
-	"github.com/sirupsen/logrus"
+	"github.com/xtls/xray-core/common/errors"
 	"surena/node/env"
 	"surena/node/server/controllers"
+	"surena/node/server/controllers/api"
 	"surena/node/utils"
 )
 
 var server *Server
+var logger = utils.CreateLogger("server")
 
 type Server struct {
 	ServerInterface
-	Logger         *logrus.Entry
 	Host           string
 	Port           int
 	App            *fiber.App
 	Started        bool
 	MainController controllers.MainControllerInterface
+	APIController  api.APIControllerInterface
 }
 
 type ServerInterface interface {
@@ -29,18 +31,25 @@ type ServerInterface interface {
 }
 
 func init() {
-	logger := utils.CreateLogger("server")
 	logger.Debug("initializing server")
 
 	app := fiber.New()
 	server = &Server{
-		Logger:         logger,
 		Host:           env.GetServerHost(),
 		Port:           env.GetServerPort(),
 		App:            app,
 		Started:        false,
 		MainController: controllers.NewMainController(app),
+		APIController:  api.NewAPIController(app),
 	}
+}
+
+func Initialize() (ServerInterface, error) {
+	if server == nil {
+		return nil, errors.New("server is not initialized")
+	}
+
+	return server, nil
 }
 
 func Get() ServerInterface {
@@ -53,34 +62,34 @@ func Get() ServerInterface {
 
 func (s *Server) Start() {
 	if s.Started {
-		s.Logger.Warn("server is already running")
+		logger.Warn("server is already running")
 		return
 	}
 
 	address := fmt.Sprintf("%s:%d", s.Host, s.Port)
 	err := s.App.Listen(address)
 	if err != nil {
-		s.Logger.Error("failed to start server", err)
+		logger.Error("failed to start server", err)
 		return
 	}
 
-	s.Logger.Infof("server is running on %s", address)
+	logger.Infof("server is running on %s", address)
 	s.Started = true
 }
 
 func (s *Server) Stop() {
 	if !s.Started {
-		s.Logger.Warn("server is not running")
+		logger.Warn("server is not running")
 		return
 	}
 
 	err := s.App.Shutdown()
 	if err != nil {
-		s.Logger.Error("failed to shutdown server", err)
+		logger.Error("failed to shutdown server", err)
 		return
 	}
 
-	s.Logger.Info("server is stopped")
+	logger.Info("server is stopped")
 	s.Started = false
 }
 
