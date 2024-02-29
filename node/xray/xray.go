@@ -1,7 +1,6 @@
 package xray
 
 import (
-	"github.com/sirupsen/logrus"
 	"github.com/xtls/xray-core/common/errors"
 	"surena/node/utils"
 	"surena/node/xray/api"
@@ -10,10 +9,10 @@ import (
 )
 
 var xray *Xray
+var logger = utils.CreateLogger("xray")
 
 type Xray struct {
 	XrayInterface
-	Logger *logrus.Entry
 	Config config.ConfigInterface
 	Core   core.CoreInterface
 	API    api.APIInterface
@@ -25,7 +24,6 @@ type XrayInterface interface {
 }
 
 func init() {
-	logger := utils.CreateLogger("xray")
 	logger.Debug("initializing Xray")
 
 	cf, err := config.Get()
@@ -34,17 +32,33 @@ func init() {
 		return
 	}
 
-	xray = &Xray{Config: cf}
-	xray.Core, _ = core.Get()
+	xray = &Xray{
+		Config: cf,
+	}
+
+	xray.Core, err = core.Initialize()
+	if err != nil {
+		logger.Error("could not initialize Xray core")
+		return
+	}
+
 	xray.API, _ = api.Get()
 }
 
-func Get() (XrayInterface, error) {
+func Initialize() (XrayInterface, error) {
 	if xray == nil {
 		return nil, errors.New("Xray not initialized")
 	}
 
 	return xray, nil
+}
+
+func Get() XrayInterface {
+	if xray == nil {
+		panic("Xray not initialized")
+	}
+
+	return xray
 }
 
 func (x *Xray) GetConfig() config.ConfigInterface {
