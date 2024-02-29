@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"github.com/xtls/xray-core/common/errors"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"os"
@@ -23,9 +24,10 @@ type Database struct {
 
 type DatabaseInterface interface {
 	GetClientModel() models.ClientModelInterface
+	Close()
 }
 
-func Initialize() (DatabaseInterface, error) {
+func init() {
 	logger.Debug("Initializing database")
 
 	databasePath := env.GetDatabasePath()
@@ -42,13 +44,13 @@ func Initialize() (DatabaseInterface, error) {
 
 	if err != nil {
 		logger.Warn("Failed to open database")
-		return nil, err
+		return
 	}
 
 	clientModel, err := models.NewClientModel(db)
 	if err != nil {
 		logger.Warn("Failed to create client model")
-		return nil, err
+		return
 	}
 
 	database = &Database{
@@ -56,8 +58,13 @@ func Initialize() (DatabaseInterface, error) {
 		DB:          db,
 		ClientModel: clientModel,
 	}
+}
 
-	logger.Debug("Database initialized")
+func Initialize() (DatabaseInterface, error) {
+	if database == nil {
+		return nil, errors.New("database is not initialized")
+	}
+
 	return database, nil
 }
 
@@ -67,6 +74,21 @@ func Get() DatabaseInterface {
 	}
 
 	return database
+}
+
+func (d *Database) Close() {
+	logger.Debug("Closing database")
+	sqlDB, err := d.DB.DB()
+	if err != nil {
+		logger.Warn("Failed to get database connection")
+		return
+	}
+
+	err = sqlDB.Close()
+	if err != nil {
+		logger.Warn("Failed to close database connection")
+		return
+	}
 }
 
 func (d *Database) GetClientModel() models.ClientModelInterface {
