@@ -3,12 +3,10 @@ package models
 import (
 	"golang.org/x/net/context"
 	"gorm.io/gorm"
-	"sync"
 	"time"
 )
 
 type Client struct {
-	sync.Mutex
 	ID        uint       `gorm:"primaryKey" json:"id"`
 	Enable    bool       `gorm:"default:true" json:"enable"`
 	Email     string     `gorm:"unique" json:"email"`
@@ -45,9 +43,6 @@ func NewClientModel(db *gorm.DB) (ClientModelInterface, error) {
 }
 
 func (m *ClientModel) Find(client *Client) error {
-	client.Lock()
-	defer client.Unlock()
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
@@ -70,9 +65,6 @@ func (m *ClientModel) FindByEmail(email string) (*Client, error) {
 
 func (m *ClientModel) Create(email string) (*Client, error) {
 	client := &Client{Email: email}
-	client.Lock()
-	defer client.Unlock()
-
 	if err := m.DB.Create(client).Error; err != nil {
 		return nil, err
 	}
@@ -82,8 +74,6 @@ func (m *ClientModel) Create(email string) (*Client, error) {
 
 func (m *ClientModel) UpdateTraffic(email string, upload uint64, download uint64) (*Client, error) {
 	client := &Client{Email: email}
-	client.Lock()
-	defer client.Unlock()
 
 	if err := m.Find(client); err != nil {
 		return nil, err
